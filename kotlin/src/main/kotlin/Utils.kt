@@ -6,5 +6,11 @@ class Utils {
             val fileName = "day $day input.txt"
             return object {}.javaClass.getResource(fileName)
         }
+
+        fun getInputLines(day: Int): List<String> {
+            return getDayInput(day)
+                .readText()
+                .split(Regex("""(\r)?\n"""))
+        }
     }
 }

@@ -48,7 +48,7 @@ private fun partOne(moves: List<Movement>): Position {
     val horizontal = moves.map(Movement::dist).sum()
     val depth = moves.map(Movement::depth).sum()
 
-    return Position(horizontal, depth,null)
+    return Position(horizontal, depth, null)
 }
 
 private fun calc(moves: List<Movement>, pos: Position): Position {
@@ -83,10 +83,7 @@ private fun partTwo(moves: List<Movement>): Position = calc(moves, Position(0, 0
 
 
 fun main() {
-    val inputData = Utils
-        .getDayInput(2)
-        .readText()
-        .split(Regex("""(\r)?\n"""))
+    val inputData = Utils.getInputLines(2)
 
     val _partOne = inputData
         .map(Movement::parse)

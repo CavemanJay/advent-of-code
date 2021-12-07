@@ -34,9 +34,7 @@ private fun toWindows(vals: List<Int>): List<Window> {
 
 fun main() {
     val inputData = Utils
-        .getDayInput(1)
-        .readText()
-        .split(Regex("""(\r)?\n"""))
+        .getInputLines(1)
         .map(String::toInt)
 
     val partOne = countIncreases(inputData)
