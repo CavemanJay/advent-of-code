@@ -1,3 +1,5 @@
+import Utils
+
 data Change = Increase | Decrease
   deriving (Show)
 
@@ -32,7 +34,7 @@ countIncreases d = length $ filter isIncrease $ map (uncurry getChange) $ transf
 
 main :: IO ()
 main = do
-  input <- lines <$> readFile "input.txt"
+  input <- lines <$> getDayInput 1
   let inputData = map read input :: [Int]
   let partOne = countIncreases inputData
   let partTwo = countIncreases $ map sum $ toWindows inputData
