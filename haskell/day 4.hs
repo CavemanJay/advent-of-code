@@ -1,10 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import Data.List
 import qualified Data.Text as T
 import Utils
 
 debug :: Bool
 debug = False
+
+size = 5
 
 data MarkableInt = Marked Int | Unmarked Int
   deriving (Show)
@@ -48,10 +51,25 @@ sampleData =
   \22 11 13  6  5\n\
   \2  0 12  3  7"
 
-textBoard :: T.Text -> [[T.Text]]
-textBoard = traceShow' debug . filter ((> 1) . length) . map (T.splitOn " ") . T.splitOn "\n"
+sampleBoard =
+  [ [Unmarked 14, Unmarked 21, Unmarked 17, Unmarked 24, Unmarked 4],
+    [Unmarked 10, Unmarked 16, Unmarked 15, Unmarked 9, Unmarked 19],
+    [Unmarked 18, Unmarked 8, Unmarked 23, Unmarked 26, Unmarked 20],
+    [Unmarked 22, Unmarked 11, Unmarked 13, Unmarked 6, Unmarked 5],
+    [Unmarked 2, Unmarked 0, Unmarked 12, Unmarked 3, Unmarked 7]
+  ]
 
--- board :: T.Text -> [[Int]]
+sampleBoard' =
+  [ [Marked 14, Marked 21, Marked 17, Marked 24, Marked 4],
+    [Unmarked 10, Unmarked 16, Unmarked 15, Marked 9, Unmarked 19],
+    [Unmarked 18, Unmarked 8, Marked 23, Unmarked 26, Unmarked 20],
+    [Unmarked 22, Marked 11, Unmarked 13, Unmarked 6, Marked 5],
+    [Marked 2, Marked 0, Unmarked 12, Unmarked 3, Marked 7]
+  ]
+
+textBoard :: T.Text -> [[T.Text]]
+textBoard = map (filter (/= "")) . filter ((> 1) . length) . map (T.splitOn " ") . T.splitOn "\n"
+
 board :: T.Text -> [[MarkableInt]]
 board = fmapNested Unmarked . fmapNested (read . T.unpack) . textBoard
 
@@ -63,15 +81,36 @@ markBoard val = fmapNested update
         then Marked $ value v
         else v
 
+hasWon :: Board -> Bool
+hasWon board = rowWin board || colWin board
+  where
+    rowWin = any ((== size) . length . traceShow' debug . filter isMarked)
+    colWin = rowWin . transpose
+
+findWinningBoard :: [Int] -> [Board] -> Board
+findWinningBoard [] _ = undefined
+findWinningBoard _ [b] = b
+findWinningBoard (next : rest) boards =
+  if length won > 0
+    then head won
+    else findWinningBoard rest (map (markBoard next) boards)
+  where
+    won = filter hasWon boards
+
+boardSum board = sum $ map value $ filter (not . isMarked) $ concat board
+
 main :: IO ()
 main = do
-  -- input' <- lines <$> getDayInput 4
-  let order = map (read . T.unpack) $ T.splitOn "," $ head $ T.lines sampleData :: [Int]
-  let sampleData' = T.replace "  " " " $ T.unlines $ tail $ tail $ T.lines sampleData
-  let boards = map board $ T.splitOn "\n\n" sampleData'
-  -- let boards = map textBoard $ T.splitOn "\n\n" sampleData'
-  let board1 = head boards
-  let updatedBoard1 = markBoard 11 board1
-  print $ board1
-  print ""
-  print $ updatedBoard1
+  input' <- T.pack <$> getDayInput 4
+  let input = input'
+  let order = map (read . T.unpack) $ T.splitOn "," $ head $ T.lines input :: [Int]
+  let boardsText = T.replace "  " " " $ T.unlines $ tail $ tail $ T.lines input
+  -- print boardsText
+  let boards = map board $ T.splitOn "\n\n" boardsText
+  -- let boards = map textBoard $ T.splitOn "\n\n" boardsText
+  -- let boards' = [last boards]
+  -- print boards
+
+-- let orders = take 13 order -- Should be a win condition after 12
+  let b = findWinningBoard order boards
+  print $  b
