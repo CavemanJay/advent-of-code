@@ -3,6 +3,9 @@
 import qualified Data.Text as T
 import Utils
 
+debug :: Bool
+debug = False
+
 data MarkableInt = Marked Int | Unmarked Int
   deriving (Show)
 
@@ -14,6 +17,12 @@ value i = case i of
 isMarked :: MarkableInt -> Bool
 isMarked (Marked _) = True
 isMarked _ = False
+
+-- mark :: (MarkableInt -> MarkableInt) (MarkableInt -> MarkableInt) -> MarkableInt -> MarkableInt
+-- mark whenMarked whenUnmarked i =
+--   if isMarked i
+--     then whenMarked i
+--     else whenUnmarked i
 
 type Board = [[MarkableInt]]
 
@@ -39,21 +48,30 @@ sampleData =
   \22 11 13  6  5\n\
   \2  0 12  3  7"
 
-board :: T.Text -> Board
--- board t = map (map (read . T.unpack)) textBoard
-board t = fmapNested (Unmarked . read . T.unpack) textBoard
+textBoard :: T.Text -> [[T.Text]]
+textBoard = traceShow' debug . filter ((> 1) . length) . map (T.splitOn " ") . T.splitOn "\n"
+
+-- board :: T.Text -> [[Int]]
+board :: T.Text -> [[MarkableInt]]
+board = fmapNested Unmarked . fmapNested (read . T.unpack) . textBoard
+
+markBoard :: Int -> Board -> Board
+markBoard val = fmapNested update
   where
-    textBoard = map (T.splitOn " ") $ T.splitOn "\n" t
+    update v =
+      if value v == val
+        then Marked $ value v
+        else v
 
 main :: IO ()
 main = do
   -- input' <- lines <$> getDayInput 4
   let order = map (read . T.unpack) $ T.splitOn "," $ head $ T.lines sampleData :: [Int]
   let sampleData' = T.replace "  " " " $ T.unlines $ tail $ tail $ T.lines sampleData
-  let b = board $ head $ T.splitOn "\n\n" sampleData'
   let boards = map board $ T.splitOn "\n\n" sampleData'
-  -- let pattern = mkRegex
-  -- putStrLn boards
-  print boards
-
--- putStrLn $ order sampleData
+  -- let boards = map textBoard $ T.splitOn "\n\n" sampleData'
+  let board1 = head boards
+  let updatedBoard1 = markBoard 11 board1
+  print $ board1
+  print ""
+  print $ updatedBoard1
