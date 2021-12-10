@@ -7,13 +7,20 @@ import Utils
 debug :: Bool
 debug = False
 
-ts :: Show p => p -> p
-ts = traceShow' True
-
-size = 5
+type Board = [[MarkableInt]]
 
 data MarkableInt = Marked Int | Unmarked Int
   deriving (Show)
+
+data CompletedBoard = CompletedBoard
+  { board :: Board,
+    finalValue :: Int,
+    iterations :: Int
+  }
+  deriving (Show)
+
+score :: CompletedBoard -> Int
+score b = boardSum (board b) * finalValue b
 
 value :: MarkableInt -> Int
 value i = case i of
@@ -23,14 +30,6 @@ value i = case i of
 isMarked :: MarkableInt -> Bool
 isMarked (Marked _) = True
 isMarked _ = False
-
--- mark :: (MarkableInt -> MarkableInt) (MarkableInt -> MarkableInt) -> MarkableInt -> MarkableInt
--- mark whenMarked whenUnmarked i =
---   if isMarked i
---     then whenMarked i
---     else whenUnmarked i
-
-type Board = [[MarkableInt]]
 
 sampleData :: T.Text
 sampleData =
@@ -73,8 +72,8 @@ sampleBoard' =
 textBoard :: T.Text -> [[T.Text]]
 textBoard = filter ((> 1) . length) . map (T.splitOn " " . T.strip) . T.splitOn "\n"
 
-board :: T.Text -> [[MarkableInt]]
-board = fmapNested Unmarked . fmapNested (read . T.unpack) . textBoard
+parseBoard :: T.Text -> [[MarkableInt]]
+parseBoard = fmapNested Unmarked . fmapNested (read . T.unpack) . textBoard
 
 markBoard :: Int -> Board -> Board
 markBoard val = fmapNested update
@@ -87,33 +86,38 @@ markBoard val = fmapNested update
 hasWon :: Board -> Bool
 hasWon board = rowWin board || colWin board
   where
-    rowWin = any ((== size) . length . traceShow' debug . filter isMarked)
+    rowWin = any $ all isMarked
     colWin = rowWin . transpose
 
-findWinningBoard :: [Int] -> [Board] -> Board
-findWinningBoard [] _ = undefined
-findWinningBoard _ [b] = b
-findWinningBoard (next : rest) boards =
-  if length won > 0
-    then head won
-    else findWinningBoard rest (map (markBoard next) boards)
+playToCompletion order board = playToCompletion' order Nothing 0 board
   where
-    won = filter hasWon boards
+    playToCompletion' :: [Int] -> Maybe Int -> Int -> Board -> CompletedBoard
+    playToCompletion' [] Nothing _ board = undefined
+    playToCompletion' _ (Just final) i board = CompletedBoard board final i
+    playToCompletion' (val : rest) final i board = playToCompletion' rest final' (i + 1) nextBoard
+      where
+        nextBoard = markBoard val board
+        final' =
+          if hasWon nextBoard
+            then Just val
+            else Nothing
 
-boardSum board = sum $ map value $ filter (not . isMarked) $ concat board
+boardSum :: Foldable t => t [MarkableInt] -> Int
+boardSum = sum . map value . filter (not . isMarked) . concat
+
+draws :: T.Text -> [Int]
+draws = map (read . T.unpack) . T.splitOn "," . head . T.lines
 
 main :: IO ()
 main = do
   input' <- T.pack <$> getDayInput 4
   let input = input'
-  let order = map (read . T.unpack) $ T.splitOn "," $ head $ T.lines input :: [Int]
+  -- let input = sampleData
+  let order = draws input
   let boardsText = T.replace "  " " " $ T.unlines $ tail $ tail $ T.lines input
-  -- print boardsText
-  let boards = map board $ T.splitOn "\n\n" boardsText
-  -- let boards = map textBoard $ T.splitOn "\n\n" boardsText
-  -- let boards' = [last boards]
-  -- print boards
-
-  -- let orders = take 13 order -- Should be a win condition after 12
-  let b = findWinningBoard order boards
-  print $ b
+  let boards = map parseBoard $ T.splitOn "\n\n" boardsText
+  let completedBoards = map (playToCompletion order) boards
+  let partOne = score $ head $ sortOn iterations completedBoards
+  let partTwo = score $ last $ sortOn iterations completedBoards
+  print partOne
+  print partTwo
