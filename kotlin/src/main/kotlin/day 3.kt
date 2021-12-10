@@ -59,18 +59,6 @@ private fun bitFilter(index: Int, common: Commonality, bins: List<List<Char>>): 
     return bitFilter(index + 1, common, matching)
 }
 
-/**
- * Based on: [Stack Overflow Answer](https://stackoverflow.com/a/70230823)
- */
-private fun <T> List<List<T>>.transpose(): List<List<T>> {
-    val cols = this[0].size
-    val rows = this.size
-    return List(cols) { j ->
-        List(rows) { i ->
-            this[i][j]
-        }
-    }
-}
 
 fun main() {
     val input = Utils
