@@ -7,6 +7,9 @@ import Utils
 debug :: Bool
 debug = False
 
+ts :: Show p => p -> p
+ts = traceShow' True
+
 size = 5
 
 data MarkableInt = Marked Int | Unmarked Int
@@ -68,7 +71,7 @@ sampleBoard' =
   ]
 
 textBoard :: T.Text -> [[T.Text]]
-textBoard = map (filter (/= "")) . filter ((> 1) . length) . map (T.splitOn " ") . T.splitOn "\n"
+textBoard = filter ((> 1) . length) . map (T.splitOn " " . T.strip) . T.splitOn "\n"
 
 board :: T.Text -> [[MarkableInt]]
 board = fmapNested Unmarked . fmapNested (read . T.unpack) . textBoard
@@ -111,6 +114,6 @@ main = do
   -- let boards' = [last boards]
   -- print boards
 
--- let orders = take 13 order -- Should be a win condition after 12
+  -- let orders = take 13 order -- Should be a win condition after 12
   let b = findWinningBoard order boards
-  print $  b
+  print $ b
