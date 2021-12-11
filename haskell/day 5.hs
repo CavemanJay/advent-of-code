@@ -4,14 +4,10 @@
 import Control.Monad
 import Data.List
 import Data.Map (Map)
-import qualified Data.Map.Strict as M
+import qualified Data.Map.Lazy as M
 import qualified Data.Text as T
 import Text.Printf
 import Utils
-
-showCellPos = False
-
-ts x = traceShow' True x
 
 sampleData :: T.Text
 sampleData =
@@ -26,7 +22,8 @@ sampleData =
   \0,0 -> 8,8\n\
   \5,5 -> 8,2"
 
-type Grid = [[Point]]
+data Direction = Up | Down
+  deriving (Show)
 
 data Point = Point {x :: Int, y :: Int}
   deriving (Ord)
@@ -52,16 +49,30 @@ linePoints :: Line -> [Point]
 linePoints line = points'
   where
     [start', end'] = sort [start line, end line]
-    points' =
-      if x start' == x end'
-        then [Point (x start') y' | y' <- [y start' .. y end']]
-        else [Point x' (y start') | x' <- [x start' .. x end']]
+    diagBase = replicate (x end' - x start') start'
+    points'
+      | isDiagonal line = case diagonalDirection line of
+        Up -> scanl (\p acc -> Point (1 + x p) (1 + y p)) start' diagBase
+        Down -> scanl (\p acc -> Point (1 + x p) (y p -1)) start' diagBase
+      | isVertical line = [Point (x start') y' | y' <- [y start' .. y end']]
+      | otherwise = [Point x' (y start') | x' <- [x start' .. x end']]
 
 isHorizontal :: Line -> Bool
 isHorizontal (Line st nd) = y st == y nd
 
 isVertical :: Line -> Bool
 isVertical (Line st nd) = x st == x nd
+
+isDiagonal :: Line -> Bool
+isDiagonal line = not (isVertical line) && not (isHorizontal line)
+
+diagonalDirection :: Line -> Direction
+diagonalDirection line =
+  if y end' > y start'
+    then Up
+    else Down
+  where
+    [start', end'] = sort [start line, end line]
 
 parseLine :: T.Text -> Line
 parseLine s = Line (parsePoint start) (parsePoint end)
@@ -72,10 +83,6 @@ parsePoint :: T.Text -> Point
 parsePoint s = Point x y
   where
     [x, y] = map (read . T.unpack) $ T.splitOn "," s
-
-display :: Grid -> String
-display [] = ""
-display (row : rest) = unwords (map show row) ++ "\n" ++ display rest
 
 getGridSize :: Foldable t => t Line -> Int
 getGridSize lines = maximum [maxX, maxY]
@@ -90,15 +97,23 @@ fillGrid (point : rest) grid = fillGrid rest $ M.adjust (point :) point grid
 createGrid :: [Point] -> Map Point [Point]
 createGrid = M.fromList . map (,[])
 
+getOverlappingCount :: Foldable t => t Line -> Int
+getOverlappingCount lines = result
+  where
+    size = getGridSize lines
+    allPoints = concatMap linePoints lines
+    cells = [Point x y | x <- [0 .. size], y <- [0 .. size]]
+    grid = fillGrid allPoints $ createGrid cells
+    result = length $ filter (\x -> length x >= 2) $ M.elems grid
+
 main :: IO ()
 main = do
   input' <- T.pack <$> getDayInput 5
   -- let input = sampleData
   let input = input'
-  let lines' = filter (\x -> isHorizontal x || isVertical x) $ map parseLine $ T.lines input
-  let size = getGridSize lines'
-  let allPoints = concatMap linePoints lines'
-  let cells = [Point x y | x <- [0 .. size], y <- [0 .. size]]
-  let grid = fillGrid allPoints $ createGrid cells
-  let result = length $ filter (\x -> length x >= 2) $ M.elems grid
-  print result
+  let lines' = map parseLine $ T.lines input
+  let partOneLines = filter (\x -> isHorizontal x || isVertical x) lines'
+  let partTwoLines = lines'
+
+  print $ getOverlappingCount partOneLines
+  print $ getOverlappingCount partTwoLines
