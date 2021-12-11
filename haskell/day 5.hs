@@ -52,8 +52,8 @@ linePoints line = points'
     diagBase = replicate (x end' - x start') start'
     points'
       | isDiagonal line = case diagonalDirection line of
-        Up -> scanl (\p acc -> Point (1 + x p) (1 + y p)) start' diagBase
-        Down -> scanl (\p acc -> Point (1 + x p) (y p -1)) start' diagBase
+        Up -> scanl (\acc _ -> Point (1 + x acc) (1 + y acc)) start' diagBase
+        Down -> scanl (\acc _ -> Point (1 + x acc) (y acc -1)) start' diagBase
       | isVertical line = [Point (x start') y' | y' <- [y start' .. y end']]
       | otherwise = [Point x' (y start') | x' <- [x start' .. x end']]
 
