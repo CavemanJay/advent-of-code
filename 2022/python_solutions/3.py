@@ -9,7 +9,7 @@ from typing import Any, List
 # CrZsJsPPZsGzwwsLwLmpwMDw
 # """
 
-data = open('3.txt').read()
+data = open('../inputs/3.txt').read()
 
 
 def split(s: str):
