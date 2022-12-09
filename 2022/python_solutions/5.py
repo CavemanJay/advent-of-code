@@ -1,8 +1,6 @@
-import re
+import parsec
 from dataclasses import dataclass
 from typing import Dict, List
-
-PicType = Dict[str, List[str]]
 
 
 @dataclass
@@ -25,42 +23,33 @@ move 1 from 1 to 2"""
 data = open('../inputs/5.txt').read()
 
 
-class JayStr:
-    """Dumb utility class for method chaining regex substitutions"""
-    val: str
+def pic_parser():
+    def convert(x):
+        pic = [[crate for crate in reversed(y) if crate] for y in zip(*x)]
+        pic = {key: pic[key-1] for key in range(1, len(pic)+1)}
+        return pic
+    no_crate = parsec.parsecmap(parsec.string("   "), lambda _: None)
+    crate = parsec.string("[") >> parsec.any() << parsec.string("]")
+    opt_crate = parsec.choice(no_crate, crate)
+    line = parsec.sepBy1(opt_crate, parsec.string(" "))
+    lines = parsec.parsecmap(parsec.sepBy1(line, parsec.string("\n")), convert)
 
-    def __init__(self, val: str) -> None:
-        self.val = val
-
-    def re_sub(self, pattern: str, sub: str):
-        self.val = re.sub(pattern, sub, self.val)
-        return self
-
-
-def parse_pic(pic: str):
-    vals = JayStr(pic)\
-        .re_sub(r'\s?(\s{3})', ',')\
-        .re_sub(r' ', ',')\
-        .re_sub(r'[\[\]]', ' ')\
-        .val.replace(" ", '').splitlines()
-    vals = [x.split(',') for x in reversed(vals)][1:]
-    keys = range(1, len(vals[0])+1)
-
-    def extract(key: int):
-        return list(x[key-1] for x in vals if x[key-1])
-    return {key: extract(key) for key in keys}
+    return lines
 
 
-def get_steps(instructions: str):
-    return [
-        Instruction(*map(int, (x for x in line.split(' ') if x.isdigit())))
-        for line in instructions.splitlines()
-    ]
+def instructions_parser():
+    any_line = parsec.regex(r'.*\n')
+    num = parsec.parsecmap(parsec.many1(parsec.digit()),
+                           lambda x: int("".join(x)))
+    line = parsec.parsecmap((
+        (parsec.string("move ") >> num) +
+        (parsec.string(" from ") >> num) +
+        (parsec.string(" to ") >> num)), lambda x: Instruction(*(list(x[0])+[x[1]])))
+    return parsec.times(any_line, 3) >> parsec.sepBy1(line, parsec.space())
 
 
-pic, instructions = data.split("\n\n")
-pic = parse_pic(pic)
-instructions = get_steps(instructions)
+pic, instructions = pic_parser().parse_partial(data)
+instructions = instructions_parser().parse(instructions)
 
 ######## ORIGINAL IMPERITIVE SOLUTIONS ########
 
@@ -72,13 +61,14 @@ instructions = get_steps(instructions)
 #     pic[instruction.dest].extend(pic[instruction.src][-1*instruction.amount:])
 #     pic[instruction.src] = pic[instruction.src][:-1*instruction.amount]
 # for i in instructions:
-#     apply(i)
-#     apply_v2(i)
+# apply(i)
+# apply_v2(i)
+
 
 ######## OG FUNCTIONAL RECURSION ########
 
 
-def solve(pic: PicType, instructions: List[Instruction], same_order: bool):
+def solve(pic: Dict, instructions: List[Instruction], same_order: bool):
     if not instructions:
         return "".join(x[-1] for x in pic.values())
     i = instructions[0]
